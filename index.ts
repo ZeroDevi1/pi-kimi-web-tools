@@ -344,6 +344,61 @@ export default function (pi: ExtensionAPI) {
     },
   });
 
+  // ── /search 命令：手动搜索 ──────────────────────────────────────────
+  pi.registerCommand("search", {
+    description: "Search the web using Kimi official search",
+    handler: async (args, ctx) => {
+      const query = args.trim();
+      if (!query) {
+        ctx.ui.notify("Usage: /search <query>", "error");
+        return;
+      }
+
+      ctx.ui.notify(`Searching: "${query}"...`, "info");
+      try {
+        const data = await callKimiSearch(apiKey, query, 5, false);
+        const formatted = formatSearchResults(data.search_results);
+
+        // 作为用户消息注入，让模型直接看到结果并继续对话
+        pi.sendUserMessage(
+          `Web search results for "${query}" (${data.search_results.length} results):\n\n${formatted}`,
+          { deliverAs: "followUp" }
+        );
+      } catch (e: any) {
+        ctx.ui.notify(`Search failed: ${e.message}`, "error");
+      }
+    },
+  });
+
+  // ── /fetch 命令：手动抓取 ────────────────────────────────────────────
+  pi.registerCommand("fetch", {
+    description: "Fetch a web page using Kimi official fetch",
+    handler: async (args, ctx) => {
+      const url = args.trim();
+      if (!url) {
+        ctx.ui.notify("Usage: /fetch <url>", "error");
+        return;
+      }
+      // 自动补全协议头
+      const targetUrl = url.startsWith("http") ? url : `https://${url}`;
+
+      ctx.ui.notify(`Fetching: ${targetUrl}...`, "info");
+      try {
+        const content = await callKimiFetch(apiKey, targetUrl);
+        const preview = content.length > 3000
+          ? content.slice(0, 3000) + "\n\n... (truncated, total " + content.length + " chars)"
+          : content;
+
+        pi.sendUserMessage(
+          `Fetched content from ${targetUrl}:\n\n${preview}`,
+          { deliverAs: "followUp" }
+        );
+      } catch (e: any) {
+        ctx.ui.notify(`Fetch failed: ${e.message}`, "error");
+      }
+    },
+  });
+
   // ── /kimi-web 命令：查看状态 ─────────────────────────────────────────
   pi.registerCommand("kimi-web", {
     description: "Show pi-kimi-web-tools status",
@@ -352,11 +407,11 @@ export default function (pi: ExtensionAPI) {
         ? `${apiKey.slice(0, 6)}...${apiKey.slice(-4)}`
         : "***";
       ctx.ui.notify(
-        `pi-kimi-web-tools active\nAPI Key: ${maskedKey}\nTools: SearchWeb, FetchURL`,
+        `pi-kimi-web-tools active\nAPI Key: ${maskedKey}\nTools: SearchWeb, FetchURL\nCommands: /search, /fetch`,
         "info"
       );
     },
   });
 
-  console.log("[pi-kimi-web-tools] Loaded: SearchWeb + FetchURL (Kimi official)");
+  console.log("[pi-kimi-web-tools] Loaded: SearchWeb + FetchURL + /search + /fetch (Kimi official)");
 }

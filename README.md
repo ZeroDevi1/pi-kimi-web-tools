@@ -27,14 +27,15 @@ Kimi CLI 是开源项目（https://github.com/MoonshotAI/kimi-cli），其内置
 
 ## 安装
 
-1. 将本目录复制到 `~/.pi/agent/extensions/pi-kimi-web-tools/`
-2. 在 `settings.json` 中添加：
-   ```json
-   "extensions": [
-     "C:/Users/demon/.pi/agent/extensions/pi-kimi-web-tools"
-   ]
-   ```
-3. `/reload`
+```bash
+pi install git:github.com/ZeroDevi1/pi-kimi-web-tools
+/reload
+```
+
+或在 `settings.json` 的 `packages` 中添加：
+```json
+"git:github.com/ZeroDevi1/pi-kimi-web-tools"
+```
 
 ## API Key 读取优先级
 
@@ -44,7 +45,18 @@ Kimi CLI 是开源项目（https://github.com/MoonshotAI/kimi-cli），其内置
 
 ## 命令
 
-- `/kimi-web` — 查看扩展状态（API Key 掩码、已注册工具）
+| 命令 | 用法 | 说明 |
+|------|------|------|
+| `/search <query>` | `/search Rust async runtime` | 手动触发网页搜索，结果直接注入对话 |
+| `/fetch <url>` | `/fetch https://www.rust-lang.org` | 手动触发网页抓取，内容直接注入对话 |
+| `/kimi-web` | `/kimi-web` | 查看扩展状态（API Key 掩码、已注册工具/命令） |
+
+### `/search` vs `SearchWeb` 工具的区别
+
+- **`SearchWeb`（工具）**：模型自主判断何时搜索，用户无感知
+- **`/search`（命令）**：用户手动触发，结果直接显示，适合主动调研
+
+两者共用同一个 Kimi 搜索后端，结果格式相同。
 
 ## 与现有扩展的关系
 
@@ -58,4 +70,5 @@ Kimi CLI 是开源项目（https://github.com/MoonshotAI/kimi-cli），其内置
 
 - `SearchWeb` 的 `include_content=true` 会消耗大量 token，limit 较大时避免开启
 - 搜索结果质量依赖 Kimi 搜索后端，可能与 Perplexity/Exa 有差异
+- Kimi fetch 服务对某些域名（如 `github.com`、`platform.moonshot.cn`）返回 500，此时会自动 fallback 到本地 HTTP 抓取
 - 不支持视频理解、GitHub 仓库克隆、PDF 提取（这些需保留 `pi-web-access`）
