@@ -37,6 +37,17 @@ pi install git:github.com/ZeroDevi1/pi-kimi-web-tools
 "git:github.com/ZeroDevi1/pi-kimi-web-tools"
 ```
 
+## 更新
+
+扩展发布后，在 Pi 中执行：
+
+```bash
+/kimi-web-update   # 从 GitHub 拉取最新代码
+/reload            # 重新加载扩展
+```
+
+无需手动 `git pull` 或重新 `pi install`。
+
 ## API Key 读取优先级
 
 1. `KIMI_API_KEY` / `KIMI_CODING_API_KEY` / `KIMI_CODE_API_KEY` 环境变量
@@ -49,6 +60,7 @@ pi install git:github.com/ZeroDevi1/pi-kimi-web-tools
 |------|------|------|
 | `/search <query>` | `/search Rust async runtime` | 手动触发网页搜索，结果直接注入对话 |
 | `/fetch <url>` | `/fetch https://www.rust-lang.org` | 手动触发网页抓取，内容直接注入对话 |
+| `/kimi-web-update` | `/kimi-web-update` | 从 GitHub 拉取最新代码，然后 `/reload` 生效 |
 | `/kimi-web` | `/kimi-web` | 查看扩展状态（API Key 掩码、已注册工具/命令） |
 
 ### `/search` vs `SearchWeb` 工具的区别

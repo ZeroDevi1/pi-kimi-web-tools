@@ -399,6 +399,26 @@ export default function (pi: ExtensionAPI) {
     },
   });
 
+  // ── /kimi-web-update 命令：自动更新 ─────────────────────────────────
+  pi.registerCommand("kimi-web-update", {
+    description: "Update pi-kimi-web-tools to latest version from GitHub",
+    handler: async (_args, ctx) => {
+      try {
+        const { execSync } = await import("node:child_process");
+        const output = execSync("git pull origin main", {
+          cwd: __dirname,
+          encoding: "utf-8",
+          timeout: 30000,
+        });
+        ctx.ui.notify(`✅ Updated:\n${output.trim()}`, "success");
+        ctx.ui.notify("Run /reload to apply changes", "info");
+      } catch (e: any) {
+        const stderr = e.stderr || e.message || String(e);
+        ctx.ui.notify(`❌ Update failed:\n${stderr}`, "error");
+      }
+    },
+  });
+
   // ── /kimi-web 命令：查看状态 ─────────────────────────────────────────
   pi.registerCommand("kimi-web", {
     description: "Show pi-kimi-web-tools status",
@@ -407,11 +427,11 @@ export default function (pi: ExtensionAPI) {
         ? `${apiKey.slice(0, 6)}...${apiKey.slice(-4)}`
         : "***";
       ctx.ui.notify(
-        `pi-kimi-web-tools active\nAPI Key: ${maskedKey}\nTools: SearchWeb, FetchURL\nCommands: /search, /fetch`,
+        `pi-kimi-web-tools active\nAPI Key: ${maskedKey}\nTools: SearchWeb, FetchURL\nCommands: /search, /fetch, /kimi-web-update`,
         "info"
       );
     },
   });
 
-  console.log("[pi-kimi-web-tools] Loaded: SearchWeb + FetchURL + /search + /fetch (Kimi official)");
+  console.log("[pi-kimi-web-tools] Loaded: SearchWeb + FetchURL + /search + /fetch + /kimi-web-update (Kimi official)");
 }
