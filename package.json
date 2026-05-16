@@ -1,0 +1,23 @@
+{
+  "name": "pi-kimi-web-tools",
+  "version": "1.0.0",
+  "description": "Pi extension: Kimi official SearchWeb + FetchURL tools",
+  "keywords": [
+    "pi-package",
+    "pi-extension",
+    "kimi",
+    "web-search",
+    "web-fetch",
+    "moonshot"
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ZeroDevi1/pi-kimi-web-tools.git"
+  },
+  "pi": {
+    "extensions": [
+      "./index.ts"
+    ]
+  }
+}
