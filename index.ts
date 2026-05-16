@@ -138,6 +138,33 @@ function formatSearchResults(results: SearchResult[]): string {
 
 // ─── Fetch 工具 ────────────────────────────────────────────────────────
 
+/**
+ * 尝试美化/解码返回内容
+ * - JSON 内容：格式化并解码 \uXXXX Unicode 转义
+ * - 文本内容：解码 \uXXXX 序列
+ */
+function prettifyContent(content: string): string {
+  const trimmed = content.trim();
+
+  // 如果看起来像 JSON，尝试格式化（JSON.parse 会自动解码 \uXXXX）
+  if (
+    (trimmed.startsWith("{") && trimmed.endsWith("}")) ||
+    (trimmed.startsWith("[") && trimmed.endsWith("]"))
+  ) {
+    try {
+      const parsed = JSON.parse(trimmed);
+      return JSON.stringify(parsed, null, 2);
+    } catch {
+      // 不是有效的 JSON，继续下面的文本处理
+    }
+  }
+
+  // 解码文本中的 \uXXXX Unicode 转义序列
+  return content.replace(/\\u([0-9a-fA-F]{4})/g, (_, hex) =>
+    String.fromCharCode(parseInt(hex, 16))
+  );
+}
+
 /** 本地 HTTP fallback 抓取（当 Kimi fetch 服务失败时使用） */
 async function fetchWithHttpGet(url: string): Promise<string> {
   const controller = new AbortController();
@@ -165,17 +192,18 @@ async function fetchWithHttpGet(url: string): Promise<string> {
 
     // 如果是纯文本或 markdown，直接返回
     if (contentType.includes("text/plain") || contentType.includes("text/markdown")) {
-      return text;
+      return prettifyContent(text);
     }
 
     // 简单 HTML 到文本的转换（去除 script/style 标签，保留文本）
-    return text
-      .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, "")
-      .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, "")
-      .replace(/<[^>]+>/g, " ")
-      .replace(/\s+/g, " ")
-      .trim()
-      .slice(0, 50000); // 限制 50KB
+    return prettifyContent(
+      text
+        .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, "")
+        .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, "")
+        .replace(/<[^>]+>/g, " ")
+        .replace(/\s+/g, " ")
+        .trim()
+    ).slice(0, 50000); // 限制 50KB
   } catch (e) {
     clearTimeout(timeout);
     throw e;
@@ -216,7 +244,7 @@ async function callKimiFetch(apiKey: string, url: string): Promise<string> {
       );
     }
 
-    return await response.text();
+    return prettifyContent(await response.text());
   } catch (e: any) {
     clearTimeout(timeout);
     if (e.name === "AbortError") {
