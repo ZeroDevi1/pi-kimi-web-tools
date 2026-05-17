@@ -1,7 +1,7 @@
 {
   "name": "pi-kimi-web-tools",
   "version": "1.0.0",
-  "description": "Pi extension: Kimi official SearchWeb + FetchURL tools",
+  "description": "Pi extension: Kimi official search_web + fetch_url tools",
   "keywords": [
     "pi-package",
     "pi-extension",

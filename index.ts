@@ -1,6 +1,6 @@
 /**
  * pi-kimi-web-tools
- * Pi 扩展：将 Kimi CLI 的 SearchWeb / FetchURL 工具桥接到 Pi
+ * Pi 扩展：将 Kimi CLI 的 search_web / fetch_url 工具桥接到 Pi
  *
  * 基于 Kimi CLI 开源代码逆向的 API Schema：
  * - Search: POST https://api.kimi.com/coding/v1/search
@@ -269,9 +269,9 @@ export default function (pi: ExtensionAPI) {
     return;
   }
 
-  // ── SearchWeb 工具 ──────────────────────────────────────────────────
+  // ── search_web 工具 ──────────────────────────────────────────────────
   pi.registerTool({
-    name: "SearchWeb",
+    name: "search_web",
     label: "Search Web",
     description:
       "Search the web using Kimi's official search service. " +
@@ -280,8 +280,8 @@ export default function (pi: ExtensionAPI) {
       "or facts that may not be in your training data.",
     promptSnippet: "Search the web for current information",
     promptGuidelines: [
-      "Use SearchWeb when the user asks about current events, recent news, or information that may have changed since your knowledge cutoff.",
-      "Use SearchWeb when you need to verify facts, find documentation, or look up specific technical details.",
+      "Use search_web when the user asks about current events, recent news, or information that may have changed since your knowledge cutoff.",
+      "Use search_web when you need to verify facts, find documentation, or look up specific technical details.",
       "Prefer concise, specific queries. If results don't contain what you need, try a more concrete query rather than increasing limit.",
       "Avoid enabling include_content when limit is large, as it consumes a large amount of tokens.",
     ],
@@ -334,9 +334,9 @@ export default function (pi: ExtensionAPI) {
     },
   });
 
-  // ── FetchURL 工具 ───────────────────────────────────────────────────
+  // ── fetch_url 工具 ───────────────────────────────────────────────────
   pi.registerTool({
-    name: "FetchURL",
+    name: "fetch_url",
     label: "Fetch URL",
     description:
       "Fetch the content of a web page using Kimi's official fetch service. " +
@@ -345,9 +345,9 @@ export default function (pi: ExtensionAPI) {
       "article, or any URL that the user references.",
     promptSnippet: "Fetch and extract content from a web page URL",
     promptGuidelines: [
-      "Use FetchURL when the user provides a URL and asks you to read or summarize its content.",
-      "Use FetchURL when SearchWeb results reference a page you need to examine in detail.",
-      "FetchURL returns the main text content extracted from the page, not raw HTML.",
+      "Use fetch_url when the user provides a URL and asks you to read or summarize its content.",
+      "Use fetch_url when search_web results reference a page you need to examine in detail.",
+      "fetch_url returns the main text content extracted from the page, not raw HTML.",
     ],
     parameters: Type.Object({
       url: Type.String({
@@ -455,11 +455,11 @@ export default function (pi: ExtensionAPI) {
         ? `${apiKey.slice(0, 6)}...${apiKey.slice(-4)}`
         : "***";
       ctx.ui.notify(
-        `pi-kimi-web-tools active\nAPI Key: ${maskedKey}\nTools: SearchWeb, FetchURL\nCommands: /search, /fetch, /kimi-web-update`,
+        `pi-kimi-web-tools active\nAPI Key: ${maskedKey}\nTools: search_web, fetch_url\nCommands: /search, /fetch, /kimi-web-update`,
         "info"
       );
     },
   });
 
-  console.log("[pi-kimi-web-tools] Loaded: SearchWeb + FetchURL + /search + /fetch + /kimi-web-update (Kimi official)");
+  console.log("[pi-kimi-web-tools] Loaded: search_web + fetch_url + /search + /fetch + /kimi-web-update (Kimi official)");
 }
