@@ -17,7 +17,6 @@ import { Type } from "typebox";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { homedir } from "node:os";
-import { isRpivWebToolsInstalled, patchRpivWebTools } from "./patch-rpiv.js";
 
 // ─── 配置 ──────────────────────────────────────────────────────────────
 
@@ -277,131 +276,111 @@ export default function (pi: ExtensionAPI) {
 		return;
 	}
 
-	// 检测 rpiv-web-tools 是否已安装
-	const hasRpiv = isRpivWebToolsInstalled();
+	// ── 模型工具 ──────────────────────────────────────────────────────────
 
-	if (hasRpiv) {
-		// 兼容模式：将 Kimi 注入 rpiv-web-tools，不注册自己的模型工具
-		patchRpivWebTools().then((ok) => {
-			if (ok) {
-				console.log(
-					"[pi-kimi-web-tools] Kimi provider 已成功注入 rpiv-web-tools",
-				);
-			} else {
-				console.warn(
-					"[pi-kimi-web-tools] 注入 rpiv-web-tools 失败，Kimi 可能不会出现在 /web-search-config 中",
-				);
-			}
-		});
-		console.log("[pi-kimi-web-tools] 兼容模式已激活（rpiv-web-tools 已安装）");
-	}
-
-	// ── 模型工具（仅在独立模式下注册）─────────────────────────────────────
-	if (!hasRpiv) {
-		// ── search_web 工具 ──────────────────────────────────────────────────
-		pi.registerTool({
-			name: "search_web",
-			label: "Search Web",
-			description:
-				"Search the web using Kimi's official search service. " +
-				"Returns a list of search results with title, URL, date, summary, and optionally full page content. " +
-				"Use this tool when you need up-to-date information, current events, documentation, " +
-				"or facts that may not be in your training data.",
-			promptSnippet: "Search the web for current information",
-			promptGuidelines: [
-				"Use search_web when the user asks about current events, recent news, or information that may have changed since your knowledge cutoff.",
-				"Use search_web when you need to verify facts, find documentation, or look up specific technical details.",
-				"Prefer concise, specific queries. If results don't contain what you need, try a more concrete query rather than increasing limit.",
-				"Avoid enabling include_content when limit is large, as it consumes a large amount of tokens.",
-			],
-			parameters: Type.Object({
-				query: Type.String({
-					description:
-						"The search query text. Be specific and concise. Use keywords rather than full sentences when possible.",
-				}),
-				limit: Type.Optional(
-					Type.Integer({
-						description:
-							"Number of results to return (1-20). Default is 5. " +
-							"You typically do not need to set this value.",
-						minimum: 1,
-						maximum: 20,
-						default: 5,
-					}),
-				),
-				include_content: Type.Optional(
-					Type.Boolean({
-						description:
-							"Whether to include the full content of web pages in results. " +
-							"Consumes a large amount of tokens. Only enable when you need detailed content from the pages.",
-						default: false,
-					}),
-				),
+	// ── search_web 工具 ──────────────────────────────────────────────────
+	pi.registerTool({
+		name: "search_web",
+		label: "Search Web",
+		description:
+			"Search the web using Kimi's official search service. " +
+			"Returns a list of search results with title, URL, date, summary, and optionally full page content. " +
+			"Use this tool when you need up-to-date information, current events, documentation, " +
+			"or facts that may not be in your training data.",
+		promptSnippet: "Search the web for current information",
+		promptGuidelines: [
+			"Use search_web when the user asks about current events, recent news, or information that may have changed since your knowledge cutoff.",
+			"Use search_web when you need to verify facts, find documentation, or look up specific technical details.",
+			"Prefer concise, specific queries. If results don't contain what you need, try a more concrete query rather than increasing limit.",
+			"Avoid enabling include_content when limit is large, as it consumes a large amount of tokens.",
+		],
+		parameters: Type.Object({
+			query: Type.String({
+				description:
+					"The search query text. Be specific and concise. Use keywords rather than full sentences when possible.",
 			}),
-
-			async execute(_toolCallId, params, _signal, onUpdate, _ctx) {
-				onUpdate?.({
-					content: [{ type: "text", text: `Searching: ${params.query}...` }],
-				});
-
-				const data = await callKimiSearch(
-					apiKey,
-					params.query,
-					params.limit ?? 5,
-					params.include_content ?? false,
-				);
-
-				const formatted = formatSearchResults(data.search_results);
-
-				return {
-					content: [{ type: "text", text: formatted }],
-					details: {
-						result_count: data.search_results.length,
-						query: params.query,
-					},
-				};
-			},
-		});
-
-		// ── fetch_url 工具 ───────────────────────────────────────────────────
-		pi.registerTool({
-			name: "fetch_url",
-			label: "Fetch URL",
-			description:
-				"Fetch the content of a web page using Kimi's official fetch service. " +
-				"Returns the main content extracted from the page in markdown format. " +
-				"Use this tool when you need to read a specific web page, documentation, " +
-				"article, or any URL that the user references.",
-			promptSnippet: "Fetch and extract content from a web page URL",
-			promptGuidelines: [
-				"Use fetch_url when the user provides a URL and asks you to read or summarize its content.",
-				"Use fetch_url when search_web results reference a page you need to examine in detail.",
-				"fetch_url returns the main text content extracted from the page, not raw HTML.",
-			],
-			parameters: Type.Object({
-				url: Type.String({
+			limit: Type.Optional(
+				Type.Integer({
 					description:
-						"The full URL of the web page to fetch. Must include the protocol (http:// or https://).",
+						"Number of results to return (1-20). Default is 5. " +
+						"You typically do not need to set this value.",
+					minimum: 1,
+					maximum: 20,
+					default: 5,
 				}),
+			),
+			include_content: Type.Optional(
+				Type.Boolean({
+					description:
+						"Whether to include the full content of web pages in results. " +
+						"Consumes a large amount of tokens. Only enable when you need detailed content from the pages.",
+					default: false,
+				}),
+			),
+		}),
+
+		async execute(_toolCallId, params, _signal, onUpdate, _ctx) {
+			onUpdate?.({
+				content: [{ type: "text", text: `Searching: ${params.query}...` }],
+			});
+
+			const data = await callKimiSearch(
+				apiKey,
+				params.query,
+				params.limit ?? 5,
+				params.include_content ?? false,
+			);
+
+			const formatted = formatSearchResults(data.search_results);
+
+			return {
+				content: [{ type: "text", text: formatted }],
+				details: {
+					result_count: data.search_results.length,
+					query: params.query,
+				},
+			};
+		},
+	});
+
+	// ── fetch_url 工具 ───────────────────────────────────────────────────
+	pi.registerTool({
+		name: "fetch_url",
+		label: "Fetch URL",
+		description:
+			"Fetch the content of a web page using Kimi's official fetch service. " +
+			"Returns the main content extracted from the page in markdown format. " +
+			"Use this tool when you need to read a specific web page, documentation, " +
+			"article, or any URL that the user references.",
+		promptSnippet: "Fetch and extract content from a web page URL",
+		promptGuidelines: [
+			"Use fetch_url when the user provides a URL and asks you to read or summarize its content.",
+			"Use fetch_url when search_web results reference a page you need to examine in detail.",
+			"fetch_url returns the main text content extracted from the page, not raw HTML.",
+		],
+		parameters: Type.Object({
+			url: Type.String({
+				description:
+					"The full URL of the web page to fetch. Must include the protocol (http:// or https://).",
 			}),
+		}),
 
-			async execute(_toolCallId, params, _signal, onUpdate, _ctx) {
-				onUpdate?.({
-					content: [{ type: "text", text: `Fetching: ${params.url}...` }],
-				});
+		async execute(_toolCallId, params, _signal, onUpdate, _ctx) {
+			onUpdate?.({
+				content: [{ type: "text", text: `Fetching: ${params.url}...` }],
+			});
 
-				const content = await callKimiFetch(apiKey, params.url);
+			const content = await callKimiFetch(apiKey, params.url);
 
-				return {
-					content: [{ type: "text", text: content }],
-					details: {
-						url: params.url,
-						content_length: content.length,
-					},
-				};
-			},
-		});
-	}
+			return {
+				content: [{ type: "text", text: content }],
+				details: {
+					url: params.url,
+					content_length: content.length,
+				},
+			};
+		},
+	});
 
 	// ── /search 命令：手动搜索 ──────────────────────────────────────────
 	pi.registerCommand("search", {
@@ -490,15 +469,13 @@ export default function (pi: ExtensionAPI) {
 					? `${apiKey.slice(0, 6)}...${apiKey.slice(-4)}`
 					: "***";
 			ctx.ui.notify(
-				`pi-kimi-web-tools active\nAPI Key: ${maskedKey}\n${hasRpiv ? "Mode: compatible (rpiv-web-tools installed)" : "Tools: search_web, fetch_url"}\nCommands: /search, /fetch, /kimi-web-update`,
+				`pi-kimi-web-tools active\nAPI Key: ${maskedKey}\nTools: search_web, fetch_url\nCommands: /search, /fetch, /kimi-web-update`,
 				"info",
 			);
 		},
 	});
 
 	console.log(
-		hasRpiv
-			? "[pi-kimi-web-tools] Loaded: /search + /fetch + /kimi-web-update + /kimi-web (兼容模式, rpiv-web-tools 已安装)"
-			: "[pi-kimi-web-tools] Loaded: search_web + fetch_url + /search + /fetch + /kimi-web-update + /kimi-web (独立模式)",
+		"[pi-kimi-web-tools] Loaded: search_web + fetch_url + /search + /fetch + /kimi-web-update + /kimi-web",
 	);
 }
